@@ -115,6 +115,7 @@
   <div class="primary-date" id="mst-date">MST &middot; Arizona</div>
   <div class="body open" id="body-clock">
     <div class="tz-row"><div class="name" id="label-pst">Pacific</div><div class="time" id="t-pst">--</div></div>
+    <div class="tz-row"><div class="name" id="label-mdt">Mountain</div><div class="time" id="t-mdt">--</div></div>
     <div class="tz-row"><div class="name" id="label-cst">Central</div><div class="time" id="t-cst">--</div></div>
     <div class="tz-row"><div class="name" id="label-est">Eastern</div><div class="time" id="t-est">--</div></div>
     <div class="tz-row"><div class="name">UTC</div><div class="time" id="t-utc">--</div></div>
@@ -272,6 +273,7 @@ function updateClock(){
   document.getElementById('mst-date').textContent = 'MST · ' + new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix', weekday:'long', month:'short', day:'numeric'});
   const zones=[
     {id:'pst', labelId:'label-pst', name:'Pacific',  iana:'America/Los_Angeles'},
+    {id:'mdt', labelId:'label-mdt', name:'Mountain', iana:'America/Denver'},
     {id:'cst', labelId:'label-cst', name:'Central',  iana:'America/Chicago'},
     {id:'est', labelId:'label-est', name:'Eastern',  iana:'America/New_York'},
   ];
@@ -284,8 +286,15 @@ function updateClock(){
   document.getElementById('header-clock').textContent=fmtShort('America/Phoenix')+' MST';
 }
 function buildConvTable(){
-  const tz=[['MST','America/Phoenix'],['PST/PDT','America/Los_Angeles'],['CST/CDT','America/Chicago'],['EST/EDT','America/New_York'],['UTC','UTC']];
-  let html='<tr><th>MST</th><th>Pacific</th><th>Central</th><th>Eastern</th><th>UTC</th></tr>';
+  const tz=[
+    ['AZ (MST)','America/Phoenix'],
+    ['Pacific','America/Los_Angeles'],
+    ['Mountain','America/Denver'],
+    ['Central','America/Chicago'],
+    ['Eastern','America/New_York'],
+    ['UTC','UTC']
+  ];
+  let html='<tr><th>AZ</th><th>Pacific</th><th>Mountain</th><th>Central</th><th>Eastern</th><th>UTC</th></tr>';
   const hours=[6,9,12,15,18,21];
   hours.forEach(h=>{
     const d=new Date(); d.setHours(h,0,0,0);
