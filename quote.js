@@ -1,4 +1,6 @@
-export default async function handler(req, res) {
+const https = require('https');
+
+module.exports = async function handler(req, res) {
   const { symbol } = req.query;
 
   if (!symbol) {
@@ -8,28 +10,37 @@ export default async function handler(req, res) {
   const apiKey = process.env.ALPHA_VANTAGE_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'Server missing ALPHA_VANTAGE_KEY env var' });
+    return res.status(500).json({ error: 'Missing ALPHA_VANTAGE_KEY env var' });
   }
 
+  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`;
+
   try {
-    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`;
-    const response = await fetch(url);
-    const data = await response.json();
+    const data = await new Promise((resolve, reject) => {
+      https.get(url, (response) => {
+        let body = '';
+        response.on('data', chunk => body += chunk);
+        response.on('end', () => {
+          try { resolve(JSON.parse(body)); }
+          catch (e) { reject(new Error('Bad JSON from Alpha Vantage')); }
+        });
+      }).on('error', reject);
+    });
 
     const q = data['Global Quote'];
 
     if (!q || !q['05. price']) {
-      return res.status(200).json({ error: 'No data for symbol', raw: data });
+      return res.status(200).json({ error: 'No data', raw: data });
     }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
     return res.status(200).json({
-      symbol: q['01. symbol'],
-      price: parseFloat(q['05. price']).toFixed(2),
-      change: q['09. change'],
+      symbol:        q['01. symbol'],
+      price:         parseFloat(q['05. price']).toFixed(2),
+      change:        q['09. change'],
       changePercent: q['10. change percent'],
     });
   } catch (err) {
     return res.status(500).json({ error: 'Upstream fetch failed', detail: String(err) });
   }
-}
+};
