@@ -114,6 +114,7 @@
   <div class="primary-time" id="mst-time">--:--:--</div>
   <div class="primary-date" id="mst-date">MST &middot; Arizona</div>
   <div class="body open" id="body-clock">
+    <div class="tz-row"><div class="name">Central (CST)</div><div class="time" id="t-cst">--</div></div>
     <div class="tz-row"><div class="name">Eastern (EST)</div><div class="time" id="t-est">--</div></div>
     <div class="tz-row"><div class="name">Pacific (PST)</div><div class="time" id="t-pst">--</div></div>
     <div class="tz-row"><div class="name">UTC</div><div class="time" id="t-utc">--</div></div>
@@ -264,14 +265,15 @@ function fmtShort(tz){
 function updateClock(){
   document.getElementById('mst-time').textContent = fmtTime('America/Phoenix');
   document.getElementById('mst-date').textContent = 'MST · ' + new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix', weekday:'long', month:'short', day:'numeric'});
+  document.getElementById('t-cst').textContent = fmtTime('America/Chicago');
   document.getElementById('t-est').textContent = fmtTime('America/New_York');
   document.getElementById('t-pst').textContent = fmtTime('America/Los_Angeles');
   document.getElementById('t-utc').textContent = fmtTime('UTC');
   document.getElementById('header-clock').textContent = fmtShort('America/Phoenix') + ' MST';
 }
 function buildConvTable(){
-  const tz=[['MST','America/Phoenix'],['EST','America/New_York'],['PST','America/Los_Angeles'],['UTC','UTC']];
-  let html='<tr><th>MST</th><th>EST</th><th>PST</th><th>UTC</th></tr>';
+  const tz=[['MST','America/Phoenix'],['CST','America/Chicago'],['EST','America/New_York'],['PST','America/Los_Angeles'],['UTC','UTC']];
+  let html='<tr><th>MST</th><th>CST</th><th>EST</th><th>PST</th><th>UTC</th></tr>';
   const hours=[6,9,12,15,18,21];
   hours.forEach(h=>{
     const d=new Date(); d.setHours(h,0,0,0);
