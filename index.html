@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mo's Dash</title>
+<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTW8ncyBEYXNoIiwic2hvcnRfbmFtZSI6Ik1vJ3MgRGFzaCIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMTQxNDE2IiwidGhlbWVfY29sb3IiOiIjMTQxNDE2In0=">
+<style>
+  :root{
+    --bg:#141416; --card:#1d1d20; --card2:#222226; --line:#2c2c30;
+    --text:#f0efe9; --sub:#9a9a96; --accent:#d8843c; --accent2:#7fae8e;
+    --danger:#d8615b; --mono: 'SF Mono', 'Consolas', monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    overscroll-behavior-y:none; user-select:none;}
+  body{padding:14px 14px 40px; max-width:520px; margin:0 auto;}
+  h1{font-size:20px; font-weight:600; margin:6px 2px 14px; display:flex; justify-content:space-between; align-items:baseline;}
+  h1 span{font-size:11px; color:var(--sub); font-weight:400;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px;}
+  .card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; cursor:pointer;}
+  .card-title{font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--sub);}
+  .chev{color:var(--sub); font-size:12px; transition:transform .15s;}
+  .chev.open{transform:rotate(90deg);}
+  .body{overflow:hidden; max-height:0; transition:max-height .2s ease;}
+  .body.open{max-height:900px;}
+
+  /* CLOCK */
+  .primary-time{font-size:46px; font-weight:300; font-variant-numeric:tabular-nums; letter-spacing:-1px;}
+  .primary-date{color:var(--sub); font-size:13px; margin-top:2px;}
+  .tz-row{display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--line); font-size:14px;}
+  .tz-row .name{color:var(--sub);}
+  .tz-row .time{font-variant-numeric:tabular-nums;}
+  .conv-table{width:100%; border-collapse:collapse; font-size:12px; margin-top:10px;}
+  .conv-table th{color:var(--sub); font-weight:500; text-align:left; padding:4px 6px; border-bottom:1px solid var(--line);}
+  .conv-table td{padding:4px 6px; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--line);}
+
+  /* WEATHER */
+  .wx-now{display:flex; align-items:center; gap:14px;}
+  .wx-temp{font-size:42px; font-weight:300;}
+  .wx-loc{font-size:13px; color:var(--sub);}
+  .wx-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+  .wx-stat{background:var(--card2); border-radius:10px; padding:8px 10px;}
+  .wx-stat .label{font-size:10px; color:var(--sub); text-transform:uppercase; letter-spacing:.05em;}
+  .wx-stat .val{font-size:16px; margin-top:2px;}
+
+  /* CALC */
+  .calc-screen{background:var(--card2); border-radius:10px; padding:14px; text-align:right; font-size:30px; font-variant-numeric:tabular-nums; margin-bottom:8px; min-height:42px; overflow-x:auto; white-space:nowrap;}
+  .calc-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+  .calc-btn{background:var(--card2); border:none; border-radius:10px; padding:14px 0; font-size:18px; color:var(--text); cursor:pointer;}
+  .calc-btn:active{background:var(--line);}
+  .calc-btn.op{color:var(--accent);}
+  .calc-btn.eq{background:var(--accent); color:#1a1a1a; font-weight:600;}
+  .calc-btn.clear{color:var(--danger);}
+
+  /* CALENDAR */
+  .cal-nav{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .cal-nav button{background:var(--card2); border:none; color:var(--text); border-radius:8px; padding:6px 12px; font-size:14px;}
+  .cal-month{font-size:14px; font-weight:600;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center;}
+  .cal-dow{font-size:10px; color:var(--sub); padding:4px 0;}
+  .cal-day{aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; font-size:13px; background:var(--card2); cursor:pointer; position:relative;}
+  .cal-day.empty{background:transparent;}
+  .cal-day.today{outline:1.5px solid var(--accent);}
+  .cal-day.has-event::after{content:''; width:4px; height:4px; border-radius:50%; background:var(--accent2); position:absolute; bottom:4px;}
+  .event-list{margin-top:12px;}
+  .event-item{display:flex; justify-content:space-between; align-items:center; background:var(--card2); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px;}
+  .event-item .et{color:var(--sub); font-size:11px; margin-top:2px;}
+  .event-item button{background:none; border:none; color:var(--danger); font-size:13px;}
+  .add-event{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+  .add-event input{background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:9px 10px; color:var(--text); font-size:14px;}
+  .add-event button{background:var(--accent); border:none; border-radius:8px; padding:10px; color:#1a1a1a; font-weight:600; font-size:14px;}
+
+  /* STOCKS */
+  .stock-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-top:1px solid var(--line);}
+  .stock-row:first-child{border-top:none;}
+  .stock-sym{font-weight:600; font-size:14px;}
+  .stock-price{font-variant-numeric:tabular-nums; text-align:right;}
+  .stock-chg{font-size:12px;}
+  .up{color:var(--accent2);} .down{color:var(--danger);}
+  .stock-add{display:flex; gap:8px; margin-top:10px;}
+  .stock-add input{flex:1; background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; color:var(--text); text-transform:uppercase; font-size:13px;}
+  .stock-add button{background:var(--accent2); border:none; border-radius:8px; padding:0 14px; color:#1a1a1a; font-weight:600;}
+  .rm{background:none; border:none; color:var(--sub); font-size:14px; margin-left:8px;}
+  .refresh-note{font-size:10px; color:var(--sub); margin-top:8px;}
+
+  .glance{font-size:12px; color:var(--sub); margin-top:-6px; margin-bottom:14px;}
+</style>
+</head>
+<body>
+
+<h1>Mo's Dash <span id="header-clock"></span></h1>
+
+<!-- CLOCK CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('clock')">
+    <div class="card-title">Clock</div>
+    <div class="chev open" id="chev-clock">&#8250;</div>
+  </div>
+  <div class="primary-time" id="mst-time">--:--:--</div>
+  <div class="primary-date" id="mst-date">MST &middot; Arizona</div>
+  <div class="body open" id="body-clock">
+    <div class="tz-row"><div class="name">Eastern (EST)</div><div class="time" id="t-est">--</div></div>
+    <div class="tz-row"><div class="name">Pacific (PST)</div><div class="time" id="t-pst">--</div></div>
+    <div class="tz-row"><div class="name">UTC</div><div class="time" id="t-utc">--</div></div>
+    <table class="conv-table" id="conv-table"></table>
+  </div>
+</div>
+
+<!-- WEATHER CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('wx')">
+    <div class="card-title">Weather</div>
+    <div class="chev open" id="chev-wx">&#8250;</div>
+  </div>
+  <div class="wx-now">
+    <div class="wx-temp" id="wx-temp">--&deg;</div>
+    <div>
+      <div id="wx-desc">Loading...</div>
+      <div class="wx-loc" id="wx-loc">Locating...</div>
+    </div>
+  </div>
+  <div class="body open" id="body-wx">
+    <div class="wx-grid">
+      <div class="wx-stat"><div class="label">High</div><div class="val" id="wx-hi">--&deg;</div></div>
+      <div class="wx-stat"><div class="label">Low</div><div class="val" id="wx-lo">--&deg;</div></div>
+      <div class="wx-stat"><div class="label">Wind</div><div class="val" id="wx-wind">--</div></div>
+      <div class="wx-stat"><div class="label">Humidity</div><div class="val" id="wx-hum">--</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STOCKS CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('stocks')">
+    <div class="card-title">Stocks</div>
+    <div class="chev open" id="chev-stocks">&#8250;</div>
+  </div>
+  <div id="stock-list">Loading...</div>
+  <div class="body open" id="body-stocks">
+    <div class="stock-add">
+      <input id="new-ticker" placeholder="e.g. AAPL" maxlength="6">
+      <button onclick="addTicker()">Add</button>
+    </div>
+    <div class="refresh-note">Free API tier: 25 lookups/day. Prices cache ~15 min. <span style="text-decoration:underline; cursor:pointer;" onclick="refreshStocks(true)">Force refresh</span></div>
+  </div>
+</div>
+
+<!-- CALENDAR CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('cal')">
+    <div class="card-title">Calendar</div>
+    <div class="chev open" id="chev-cal">&#8250;</div>
+  </div>
+  <div class="glance" id="cal-glance">No events today</div>
+  <div class="body open" id="body-cal">
+    <div class="cal-nav">
+      <button onclick="shiftMonth(-1)">&lt;</button>
+      <div class="cal-month" id="cal-month-label"></div>
+      <button onclick="shiftMonth(1)">&gt;</button>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="event-list" id="event-list"></div>
+    <div class="add-event">
+      <input type="date" id="ev-date">
+      <input type="time" id="ev-time">
+      <input type="text" id="ev-title" placeholder="Event title">
+      <button onclick="addEvent()">Add event</button>
+    </div>
+  </div>
+</div>
+
+<!-- CALCULATOR CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('calc')">
+    <div class="card-title">Calculator</div>
+    <div class="chev" id="chev-calc">&#8250;</div>
+  </div>
+  <div class="body" id="body-calc">
+    <div class="calc-screen" id="calc-screen">0</div>
+    <div class="calc-grid">
+      <button class="calc-btn clear" onclick="calcClear()">C</button>
+      <button class="calc-btn op" onclick="calcInput('(')">(</button>
+      <button class="calc-btn op" onclick="calcInput(')')">)</button>
+      <button class="calc-btn op" onclick="calcInput('/')">&divide;</button>
+
+      <button class="calc-btn" onclick="calcInput('7')">7</button>
+      <button class="calc-btn" onclick="calcInput('8')">8</button>
+      <button class="calc-btn" onclick="calcInput('9')">9</button>
+      <button class="calc-btn op" onclick="calcInput('*')">&times;</button>
+
+      <button class="calc-btn" onclick="calcInput('4')">4</button>
+      <button class="calc-btn" onclick="calcInput('5')">5</button>
+      <button class="calc-btn" onclick="calcInput('6')">6</button>
+      <button class="calc-btn op" onclick="calcInput('-')">&minus;</button>
+
+      <button class="calc-btn" onclick="calcInput('1')">1</button>
+      <button class="calc-btn" onclick="calcInput('2')">2</button>
+      <button class="calc-btn" onclick="calcInput('3')">3</button>
+      <button class="calc-btn op" onclick="calcInput('+')">+</button>
+
+      <button class="calc-btn" onclick="calcBack()">&larr;</button>
+      <button class="calc-btn" onclick="calcInput('0')">0</button>
+      <button class="calc-btn" onclick="calcInput('.')">.</button>
+      <button class="calc-btn eq" onclick="calcEquals()">=</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- CARD TOGGLE ---------- */
+function toggle(id){
+  document.getElementById('body-'+id).classList.toggle('open');
+  document.getElementById('chev-'+id).classList.toggle('open');
+}
+
+/* ---------- CLOCK ---------- */
+function fmtTime(tz){
+  return new Date().toLocaleTimeString('en-US',{timeZone:tz, hour:'numeric', minute:'2-digit', second:'2-digit'});
+}
+function fmtShort(tz){
+  return new Date().toLocaleTimeString('en-US',{timeZone:tz, hour:'numeric', minute:'2-digit'});
+}
+function updateClock(){
+  document.getElementById('mst-time').textContent = fmtTime('America/Phoenix');
+  document.getElementById('mst-date').textContent = 'MST · ' + new Date().toLocaleDateString('en-US',{timeZone:'America/Phoenix', weekday:'long', month:'short', day:'numeric'});
+  document.getElementById('t-est').textContent = fmtTime('America/New_York');
+  document.getElementById('t-pst').textContent = fmtTime('America/Los_Angeles');
+  document.getElementById('t-utc').textContent = fmtTime('UTC');
+  document.getElementById('header-clock').textContent = fmtShort('America/Phoenix') + ' MST';
+}
+function buildConvTable(){
+  const tz=[['MST','America/Phoenix'],['EST','America/New_York'],['PST','America/Los_Angeles'],['UTC','UTC']];
+  let html='<tr><th>MST</th><th>EST</th><th>PST</th><th>UTC</th></tr>';
+  const hours=[6,9,12,15,18,21];
+  hours.forEach(h=>{
+    const d=new Date(); d.setHours(h,0,0,0);
+    let row='<tr>';
+    tz.forEach(([label,zone])=>{
+      row+='<td>'+d.toLocaleTimeString('en-US',{timeZone:zone, hour:'numeric', minute:'2-digit'})+'</td>';
+    });
+    row+='</tr>';
+    html+=row;
+  });
+  document.getElementById('conv-table').innerHTML=html;
+}
+updateClock(); buildConvTable();
+setInterval(updateClock, 1000);
+
+/* ---------- WEATHER (Open-Meteo, no key needed) ---------- */
+const DEFAULT_LAT=33.4353, DEFAULT_LON=-112.3576; // Goodyear, AZ fallback
+function wmoDesc(code){
+  const map={0:'Clear',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',
+    51:'Light drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',
+    71:'Light snow',73:'Snow',75:'Heavy snow',80:'Showers',81:'Showers',82:'Heavy showers',
+    95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+  return map[code]||'--';
+}
+async function loadWeather(lat,lon,locLabel){
+  try{
+    const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`;
+    const res=await fetch(url);
+    const data=await res.json();
+    document.getElementById('wx-temp').innerHTML=Math.round(data.current.temperature_2m)+'&deg;';
+    document.getElementById('wx-desc').textContent=wmoDesc(data.current.weather_code);
+    document.getElementById('wx-loc').textContent=locLabel;
+    document.getElementById('wx-hi').innerHTML=Math.round(data.daily.temperature_2m_max[0])+'&deg;';
+    document.getElementById('wx-lo').innerHTML=Math.round(data.daily.temperature_2m_min[0])+'&deg;';
+    document.getElementById('wx-wind').textContent=Math.round(data.current.wind_speed_10m)+' mph';
+    document.getElementById('wx-hum').textContent=Math.round(data.current.relative_humidity_2m)+'%';
+  }catch(e){
+    document.getElementById('wx-desc').textContent='Weather unavailable';
+  }
+}
+function initWeather(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos=>loadWeather(pos.coords.latitude, pos.coords.longitude, 'Current location'),
+      ()=>loadWeather(DEFAULT_LAT, DEFAULT_LON, 'Goodyear, AZ'),
+      {timeout:5000}
+    );
+  } else {
+    loadWeather(DEFAULT_LAT, DEFAULT_LON, 'Goodyear, AZ');
+  }
+}
+initWeather();
+setInterval(initWeather, 15*60*1000);
+
+/* ---------- CALCULATOR ---------- */
+let calcExpr='';
+function calcInput(v){
+  calcExpr+=v;
+  document.getElementById('calc-screen').textContent=calcExpr||'0';
+}
+function calcBack(){
+  calcExpr=calcExpr.slice(0,-1);
+  document.getElementById('calc-screen').textContent=calcExpr||'0';
+}
+function calcClear(){
+  calcExpr='';
+  document.getElementById('calc-screen').textContent='0';
+}
+function calcEquals(){
+  try{
+    if(!/^[0-9+\-*/().\s]+$/.test(calcExpr)) throw new Error('bad');
+    const result=Function('"use strict"; return ('+calcExpr+')')();
+    calcExpr=String(Math.round(result*1e8)/1e8);
+    document.getElementById('calc-screen').textContent=calcExpr;
+  }catch(e){
+    document.getElementById('calc-screen').textContent='Error';
+    calcExpr='';
+  }
+}
+
+/* ---------- CALENDAR ---------- */
+let calViewDate=new Date();
+let calEvents={};
+
+function loadEvents(){
+  try{
+    const raw=localStorage.getItem('calendar-events');
+    calEvents = raw ? JSON.parse(raw) : {};
+  }catch(e){ calEvents={}; }
+  renderCalendar();
+}
+function saveEvents(){
+  try{ localStorage.setItem('calendar-events', JSON.stringify(calEvents)); }
+  catch(e){ console.error('save failed', e); }
+}
+function dateKey(y,m,d){
+  return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+function shiftMonth(n){
+  calViewDate.setMonth(calViewDate.getMonth()+n);
+  renderCalendar();
+}
+function renderCalendar(){
+  const y=calViewDate.getFullYear(), m=calViewDate.getMonth();
+  document.getElementById('cal-month-label').textContent=calViewDate.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+  const firstDow=new Date(y,m,1).getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const todayKey=dateKey(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+  let html='';
+  ['S','M','T','W','T','F','S'].forEach(d=>html+='<div class="cal-dow">'+d+'</div>');
+  for(let i=0;i<firstDow;i++) html+='<div class="cal-day empty"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const key=dateKey(y,m,d);
+    const has=calEvents[key] && calEvents[key].length>0;
+    const isToday=key===todayKey;
+    html+=`<div class="cal-day ${isToday?'today':''} ${has?'has-event':''}" onclick="selectDay('${key}')">${d}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+  renderEventList(todayKey);
+  updateGlance(todayKey);
+}
+function updateGlance(todayKey){
+  const evs=calEvents[todayKey]||[];
+  document.getElementById('cal-glance').textContent = evs.length
+    ? evs.length+' event'+(evs.length>1?'s':'')+' today'
+    : 'No events today';
+}
+let selectedKey=null;
+function selectDay(key){
+  selectedKey=key;
+  document.getElementById('ev-date').value=key;
+  renderEventList(key);
+}
+function renderEventList(key){
+  const evs=(calEvents[key]||[]).slice().sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  let html=evs.map((e,i)=>`
+    <div class="event-item">
+      <div><div>${escapeHtml(e.title)}</div><div class="et">${e.time||'All day'} &middot; ${key}</div></div>
+      <button onclick="deleteEvent('${key}',${i})">&times;</button>
+    </div>`).join('');
+  document.getElementById('event-list').innerHTML = html || '<div style="color:var(--sub); font-size:13px;">No events on '+key+'</div>';
+}
+function escapeHtml(s){
+  const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+}
+async function addEvent(){
+  const date=document.getElementById('ev-date').value;
+  const time=document.getElementById('ev-time').value;
+  const title=document.getElementById('ev-title').value.trim();
+  if(!date || !title) return;
+  if(!calEvents[date]) calEvents[date]=[];
+  calEvents[date].push({title, time});
+  await saveEvents();
+  document.getElementById('ev-title').value='';
+  renderCalendar();
+  renderEventList(date);
+}
+async function deleteEvent(key, idx){
+  calEvents[key].splice(idx,1);
+  if(calEvents[key].length===0) delete calEvents[key];
+  await saveEvents();
+  renderCalendar();
+  renderEventList(key);
+}
+loadEvents();
+document.getElementById('ev-date').valueAsDate=new Date();
+
+/* ---------- STOCKS ---------- */
+let stockList=[];
+let stockCache={};
+const CACHE_MS = 15*60*1000;
+
+function loadStockState(){
+  try{
+    const l=localStorage.getItem('stock-list');
+    stockList = l ? JSON.parse(l) : ['AAPL','MSFT'];
+  }catch(e){ stockList=['AAPL','MSFT']; }
+  try{
+    const c=localStorage.getItem('stock-cache');
+    stockCache = c ? JSON.parse(c) : {};
+  }catch(e){ stockCache={}; }
+  renderStocks();
+  refreshStocks(false);
+}
+function saveStockList(){
+  try{ localStorage.setItem('stock-list', JSON.stringify(stockList)); }catch(e){}
+}
+function saveStockCache(){
+  try{ localStorage.setItem('stock-cache', JSON.stringify(stockCache)); }catch(e){}
+}
+function renderStocks(){
+  if(stockList.length===0){
+    document.getElementById('stock-list').innerHTML='<div style="color:var(--sub); font-size:13px;">No tickers added yet.</div>';
+    return;
+  }
+  let html='';
+  stockList.forEach(sym=>{
+    const q=stockCache[sym];
+    if(q){
+      const chg=parseFloat(q.change), pct=q.changePercent;
+      const cls = chg>=0 ? 'up' : 'down';
+      const arrow = chg>=0 ? '▲' : '▼';
+      html+=`<div class="stock-row">
+        <div><div class="stock-sym">${sym}</div></div>
+        <div class="stock-price">$${q.price}<div class="stock-chg ${cls}">${arrow} ${Math.abs(chg).toFixed(2)} (${pct})</div></div>
+        <button class="rm" onclick="removeTicker('${sym}')">&times;</button>
+      </div>`;
+    } else {
+      html+=`<div class="stock-row">
+        <div class="stock-sym">${sym}</div>
+        <div class="stock-price" style="color:var(--sub);">--</div>
+        <button class="rm" onclick="removeTicker('${sym}')">&times;</button>
+      </div>`;
+    }
+  });
+  document.getElementById('stock-list').innerHTML=html;
+}
+async function fetchQuote(sym){
+  const res=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}`);
+  const data=await res.json();
+  if(!data || data.error || !data.price) return null;
+  return {
+    price: data.price,
+    change: data.change,
+    changePercent: data.changePercent,
+    ts: Date.now()
+  };
+}
+async function refreshStocks(force){
+  for(const sym of stockList){
+    const cached=stockCache[sym];
+    if(!force && cached && (Date.now()-cached.ts < CACHE_MS)) continue;
+    try{
+      const q=await fetchQuote(sym);
+      if(q) stockCache[sym]=q;
+    }catch(e){ console.error('quote fail', sym, e); }
+    renderStocks();
+  }
+  await saveStockCache();
+}
+async function addTicker(){
+  const input=document.getElementById('new-ticker');
+  const sym=input.value.trim().toUpperCase();
+  if(!sym || stockList.includes(sym)) return;
+  stockList.push(sym);
+  input.value='';
+  await saveStockList();
+  renderStocks();
+  refreshStocks(false);
+}
+async function removeTicker(sym){
+  stockList=stockList.filter(s=>s!==sym);
+  delete stockCache[sym];
+  await saveStockList();
+  await saveStockCache();
+  renderStocks();
+}
+loadStockState();
+</script>
+</body>
+</html>
