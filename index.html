@@ -54,7 +54,20 @@
   .calc-btn.eq{background:var(--accent); color:#1a1a1a; font-weight:600;}
   .calc-btn.clear{color:var(--danger);}
 
-  /* CALENDAR */
+  /* CONVERSION */
+  .conv-tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;}
+  .conv-tab{background:var(--card2); border:none; border-radius:8px; padding:6px 10px; color:var(--sub); font-size:12px; cursor:pointer;}
+  .conv-tab.active{background:var(--accent); color:#1a1a1a; font-weight:600;}
+  .conv-input-row{display:flex; gap:8px; margin-bottom:12px;}
+  .conv-input-row input{flex:1; background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:9px 10px; color:var(--text); font-size:15px;}
+  .conv-input-row select{background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:9px 8px; color:var(--text); font-size:13px;}
+  .conv-result-row{display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-top:1px solid var(--line);}
+  .conv-result-row:first-child{border-top:none;}
+  .conv-result-label{color:var(--sub); font-size:12px;}
+  .conv-result-val{font-size:15px; font-variant-numeric:tabular-nums; font-weight:500;}
+  .conv-result-row.highlight .conv-result-val{color:var(--accent);}
+
+
   .cal-nav{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
   .cal-nav button{background:var(--card2); border:none; color:var(--text); border-radius:8px; padding:6px 12px; font-size:14px;}
   .cal-month{font-size:14px; font-weight:600;}
@@ -144,6 +157,32 @@
       <button onclick="addTicker()">Add</button>
     </div>
     <div class="refresh-note">Free API tier: 25 lookups/day. Prices cache ~15 min. <span id="refresh-btn" style="text-decoration:underline; cursor:pointer;" onclick="forceRefresh()">Force refresh</span></div>
+  </div>
+</div>
+
+<!-- CONVERSION CARD -->
+<div class="card">
+  <div class="card-head" onclick="toggle('conv')">
+    <div class="card-title">Unit Conversion</div>
+    <div class="chev" id="chev-conv">&#8250;</div>
+  </div>
+  <div class="body" id="body-conv">
+    <!-- Category tabs -->
+    <div class="conv-tabs" id="conv-tabs">
+      <button class="conv-tab active" onclick="setConvCat('weight')">Weight</button>
+      <button class="conv-tab" onclick="setConvCat('volume')">Volume</button>
+      <button class="conv-tab" onclick="setConvCat('length')">Length</button>
+      <button class="conv-tab" onclick="setConvCat('temp')">Temp</button>
+      <button class="conv-tab" onclick="setConvCat('area')">Area</button>
+      <button class="conv-tab" onclick="setConvCat('speed')">Speed</button>
+    </div>
+    <!-- Input row -->
+    <div class="conv-input-row">
+      <input type="number" id="conv-input" placeholder="Enter value" oninput="runConversion()">
+      <select id="conv-from" onchange="runConversion()"></select>
+    </div>
+    <!-- Results -->
+    <div id="conv-results"></div>
   </div>
 </div>
 
@@ -286,6 +325,144 @@ function initWeather(){
 }
 initWeather();
 setInterval(initWeather, 15*60*1000);
+
+/* ---------- UNIT CONVERSION ---------- */
+const CONV_CATS = {
+  weight: {
+    units: [
+      { key:'oz',    label:'Ounces (oz)',       toBase: v => v * 28.3495,   fromBase: v => v / 28.3495 },
+      { key:'lb',    label:'Pounds (lb)',        toBase: v => v * 453.592,   fromBase: v => v / 453.592 },
+      { key:'g',     label:'Grams (g)',          toBase: v => v,             fromBase: v => v },
+      { key:'kg',    label:'Kilograms (kg)',     toBase: v => v * 1000,      fromBase: v => v / 1000 },
+      { key:'st',    label:'Stone (st)',         toBase: v => v * 6350.29,   fromBase: v => v / 6350.29 },
+      { key:'t',     label:'Metric Ton (t)',     toBase: v => v * 1e6,       fromBase: v => v / 1e6 },
+    ]
+  },
+  volume: {
+    units: [
+      { key:'tsp',   label:'Teaspoon (tsp)',     toBase: v => v * 4.92892,   fromBase: v => v / 4.92892 },
+      { key:'tbsp',  label:'Tablespoon (tbsp)',  toBase: v => v * 14.7868,   fromBase: v => v / 14.7868 },
+      { key:'floz',  label:'Fl. Oz (fl oz)',     toBase: v => v * 29.5735,   fromBase: v => v / 29.5735 },
+      { key:'cup',   label:'Cup (US)',            toBase: v => v * 236.588,   fromBase: v => v / 236.588 },
+      { key:'pt',    label:'Pint (US pt)',        toBase: v => v * 473.176,   fromBase: v => v / 473.176 },
+      { key:'qt',    label:'Quart (US qt)',       toBase: v => v * 946.353,   fromBase: v => v / 946.353 },
+      { key:'gal',   label:'Gallon (US gal)',     toBase: v => v * 3785.41,   fromBase: v => v / 3785.41 },
+      { key:'ml',    label:'Milliliter (ml)',     toBase: v => v,             fromBase: v => v },
+      { key:'l',     label:'Liter (L)',           toBase: v => v * 1000,      fromBase: v => v / 1000 },
+    ]
+  },
+  length: {
+    units: [
+      { key:'in',    label:'Inch (in)',           toBase: v => v * 25.4,      fromBase: v => v / 25.4 },
+      { key:'ft',    label:'Foot (ft)',           toBase: v => v * 304.8,     fromBase: v => v / 304.8 },
+      { key:'yd',    label:'Yard (yd)',           toBase: v => v * 914.4,     fromBase: v => v / 914.4 },
+      { key:'mi',    label:'Mile (mi)',           toBase: v => v * 1.60934e6, fromBase: v => v / 1.60934e6 },
+      { key:'mm',    label:'Millimeter (mm)',     toBase: v => v,             fromBase: v => v },
+      { key:'cm',    label:'Centimeter (cm)',     toBase: v => v * 10,        fromBase: v => v / 10 },
+      { key:'m',     label:'Meter (m)',           toBase: v => v * 1000,      fromBase: v => v / 1000 },
+      { key:'km',    label:'Kilometer (km)',      toBase: v => v * 1e6,       fromBase: v => v / 1e6 },
+    ]
+  },
+  temp: {
+    special: true,
+    units: [
+      { key:'f',  label:'Fahrenheit (°F)', toC: v => (v-32)*5/9,   fromC: v => v*9/5+32 },
+      { key:'c',  label:'Celsius (°C)',    toC: v => v,              fromC: v => v },
+      { key:'k',  label:'Kelvin (K)',      toC: v => v-273.15,       fromC: v => v+273.15 },
+    ]
+  },
+  area: {
+    units: [
+      { key:'sqin',  label:'Sq Inch (in²)',      toBase: v => v * 645.16,    fromBase: v => v / 645.16 },
+      { key:'sqft',  label:'Sq Foot (ft²)',      toBase: v => v * 92903,     fromBase: v => v / 92903 },
+      { key:'sqyd',  label:'Sq Yard (yd²)',      toBase: v => v * 836127,    fromBase: v => v / 836127 },
+      { key:'acre',  label:'Acre',                toBase: v => v * 4.047e9,   fromBase: v => v / 4.047e9 },
+      { key:'sqmi',  label:'Sq Mile (mi²)',      toBase: v => v * 2.59e12,   fromBase: v => v / 2.59e12 },
+      { key:'sqcm',  label:'Sq Centimeter (cm²)',toBase: v => v,             fromBase: v => v },
+      { key:'sqm',   label:'Sq Meter (m²)',      toBase: v => v * 1e4,       fromBase: v => v / 1e4 },
+      { key:'ha',    label:'Hectare (ha)',        toBase: v => v * 1e8,       fromBase: v => v / 1e8 },
+      { key:'sqkm',  label:'Sq Kilometer (km²)', toBase: v => v * 1e10,      fromBase: v => v / 1e10 },
+    ]
+  },
+  speed: {
+    units: [
+      { key:'mph',   label:'Miles/hr (mph)',      toBase: v => v * 1.60934,   fromBase: v => v / 1.60934 },
+      { key:'fps',   label:'Feet/sec (fps)',      toBase: v => v * 1.09728,   fromBase: v => v / 1.09728 },
+      { key:'kph',   label:'Km/hr (kph)',         toBase: v => v,             fromBase: v => v },
+      { key:'mps',   label:'Meters/sec (m/s)',    toBase: v => v * 3.6,       fromBase: v => v / 3.6 },
+      { key:'kts',   label:'Knots (kts)',         toBase: v => v * 1.852,     fromBase: v => v / 1.852 },
+    ]
+  }
+};
+
+let convCat = 'weight';
+
+function setConvCat(cat){
+  convCat = cat;
+  document.querySelectorAll('.conv-tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  buildConvFrom();
+  runConversion();
+}
+
+function buildConvFrom(){
+  const sel = document.getElementById('conv-from');
+  const units = CONV_CATS[convCat].units;
+  sel.innerHTML = units.map(u => `<option value="${u.key}">${u.label}</option>`).join('');
+}
+
+function fmtNum(n){
+  if(Math.abs(n) === 0) return '0';
+  if(Math.abs(n) >= 0.001 && Math.abs(n) < 1e10){
+    // trim trailing zeros but keep up to 6 sig figs
+    return parseFloat(n.toPrecision(6)).toLocaleString('en-US', {maximumFractionDigits: 6});
+  }
+  return n.toExponential(4);
+}
+
+function runConversion(){
+  const raw = document.getElementById('conv-input').value;
+  const fromKey = document.getElementById('conv-from').value;
+  const cat = CONV_CATS[convCat];
+  const val = parseFloat(raw);
+  const resultsEl = document.getElementById('conv-results');
+
+  if(raw === '' || isNaN(val)){
+    resultsEl.innerHTML = '<div style="color:var(--sub);font-size:13px;padding:8px 0;">Enter a value above.</div>';
+    return;
+  }
+
+  let html = '';
+
+  if(cat.special){ // temperature
+    const fromUnit = cat.units.find(u => u.key === fromKey);
+    const celsius = fromUnit.toC(val);
+    cat.units.forEach(u => {
+      const result = u.fromC(celsius);
+      const isFrom = u.key === fromKey;
+      html += `<div class="conv-result-row ${isFrom?'highlight':''}">
+        <div class="conv-result-label">${u.label}</div>
+        <div class="conv-result-val">${fmtNum(result)}${isFrom?' ←':''}</div>
+      </div>`;
+    });
+  } else {
+    const fromUnit = cat.units.find(u => u.key === fromKey);
+    const base = fromUnit.toBase(val);
+    cat.units.forEach(u => {
+      const result = u.fromBase(base);
+      const isFrom = u.key === fromKey;
+      html += `<div class="conv-result-row ${isFrom?'highlight':''}">
+        <div class="conv-result-label">${u.label}</div>
+        <div class="conv-result-val">${fmtNum(result)}${isFrom?' ←':''}</div>
+      </div>`;
+    });
+  }
+
+  resultsEl.innerHTML = html;
+}
+
+// init conversion card
+buildConvFrom();
 
 /* ---------- CALCULATOR ---------- */
 let calcExpr='';
